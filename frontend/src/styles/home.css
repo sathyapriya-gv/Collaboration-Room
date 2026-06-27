@@ -1,0 +1,132 @@
+/* Home Page */
+
+.home-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  padding: 40px 20px;
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  padding: 0 20px;
+}
+
+.home-header h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 32px;
+}
+
+.btn-logout {
+  padding: 10px 20px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: rgba(239, 68, 68, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.home-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.home-card {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 30px;
+}
+
+.home-card h2 {
+  color: var(--text);
+  margin-bottom: 24px;
+  font-size: 24px;
+}
+
+.room-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.action-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.action-group input {
+  flex: 1;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--sans);
+  color: var(--text);
+  background: var(--bg);
+}
+
+.action-group input::placeholder {
+  color: var(--text-lighter);
+}
+
+.action-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-secondary {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.room-info {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.room-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: var(--text-light);
+}
+
+.room-info strong {
+  color: var(--text);
+}

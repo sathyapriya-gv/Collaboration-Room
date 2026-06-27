@@ -1,0 +1,167 @@
+=== MATCH: function Whiteboard ===
+29-5200157c0776","timestamp":"2026-06-02T09:02:38.694Z",
+"parentId":"bc8eb789-0f7c-47ca-8fb6-e973c7d96f5c"}
+{"type":"tool.execution_start","data":{"toolCallId":"toolu_bdrk_01Jz9YKqaoL7SW4
+dpZ8LXT2d","toolName":"replace_string_in_file","arguments":{"filePath":"d:\\col
+lab-platform\\frontend\\src\\components\\Whiteboard.jsx","newString":"import { 
+useEffect, useRef, useState } from "react";
+import { fabric } from 
+"fabric";
+import socket from "../socket";
+import axios from 
+"axios";
+
+function Whiteboard({ roomId }) {
+  const canvasRef = 
+useRef(null);
+  const [canvasObj, setCanvasObj] = useState(null);
+  const 
+[drawMode, setDrawMode] = useState(false);
+  const isRemoteUpdate = 
+useRef(false);
+
+  useEffect(() => {
+    const container = 
+canvasRef.current?.parentElement;
+    const width = container?.offsetWidth || 
+800;
+    const height = container?.offsetHeight || 500;
+
+    const canvas = 
+new fabric.Canvas(canvasRef.current, {
+      width: width,
+      height: 
+height,
+      backgroundColor: "white",
+      isDrawingMode: false,
+    
+});
+
+    setCanvasObj(canvas);
+
+    const loadBoard = async () => {
+      
+try {
+        const res = await axios.get(
+          
+`http://localhost:5000/api/whiteboard/${roomId}`
+        );
+
+        if 
+(res.data?.canvasData) {
+          canvas.loadFromJSON(res.data.canvasData, 
+() => {
+            canvas.renderAll();
+          });
+        }
+      } 
+catch (err) {
+        console.log("Failed to load whiteboard:", err);
+     
+ }
+    };
+
+    loadBoard();
+
+    // Sync when objects are moved/resized
+ 
+   canvas.on("object:modified", () => {
+      if (!isRemoteUpdate.current) 
+{
+        socket.emit("whiteboard-update", {
+          roomId,
+          
+canvasData: canvas.toJSON(),
+        });
+      }
+    });
+
+    // Sync 
+when drawings are created
+    canvas.on("path:created", () => {
+      if 
+(!isRemoteUpdate.current) {
+        socket.emit("whiteboard-update", {
+    
+      roomId,
+          canvasData: canvas.toJSON(),
+        });
+      }
+  
+  });
+
+    socket.on("whiteboard-sync", (canvasData) => {
+      if 
+(!canvasData) return;
+
+      isRemoteUpdate.current = true;
+
+      
+canvas.loadFromJSON(canvasData, () => {
+        canvas.renderAll();
+        
+isRemoteUpdate.current = false;
+      });
+    });
+
+    return () => {
+    
+  socket.off("whiteboard-sync");
+      canvas.dispose();
+    };
+  }, 
+[roomId]);
+
+  const syncCanvas = () => {
+    if (!canvasObj) return;
+
+    
+if (isRemoteUpdate.current) return;
+
+    socket.emit("whiteboard-update", 
+{
+      roomId,
+      canvasData: canvasObj.toJSON(),
+    });
+  };
+
+  
+const addRectangle = () => {
+    if (!canvasObj) return;
+
+    const rect = 
+new fabric.Rect({
+      left: 100,
+      top: 100,
+      width: 120,
+      
+height: 80,
+      fill: "#818cf8",
+      stroke: "#4f46e5",
+      
+strokeWidth: 2,
+    });
+
+    canvasObj.add(rect);
+    
+canvasObj.renderAll();
+    canvasObj.isDrawingMode = false;
+    
+setDrawMode(false);
+
+    syncCanvas();
+  };
+
+  const addCircle = () => 
+{
+    if (!canvasObj) return;
+
+    const circle = new fabric.Circle({
+     
+ left: 150,
+      top: 150,
+      radius: 50,
+      fill: "#ec4899",
+    
+  stroke: \
+
