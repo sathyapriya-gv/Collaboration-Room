@@ -16,7 +16,8 @@ function CodeEditor({ roomId }) {
     const fetchCode = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/code/${roomId}`
+          `https://collaboration-room.onrender.com
+/api/code/${roomId}`
         );
 
         if (res.data?.code) {

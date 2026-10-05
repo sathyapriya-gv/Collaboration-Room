@@ -168,7 +168,8 @@ npm run build
 ## 🔗 Integration Notes
 
 ### Backend Connection
-- Backend should be running on `http://localhost:5000`
+- Backend should be running on `https://collaboration-room.onrender.com
+`
 - Socket.IO connection configured in `src/socket.js`
 - API requests use axios configured in `src/services/api.js`
 

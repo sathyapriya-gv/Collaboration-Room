@@ -13,7 +13,8 @@ function AttendanceReport({ roomId }) {
   const fetchAttendance = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/attendance/${roomId}`
+        `https://collaboration-room.onrender.com
+/api/attendance/${roomId}`
       );
 
       setAttendance(res.data);

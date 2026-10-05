@@ -8,7 +8,8 @@ function FileShare({ roomId }) {
     const fetchFiles = async () => {
         try {
             const res = await axios.get(
-                `http://localhost:5000/api/files/${roomId}`
+                `https://collaboration-room.onrender.com
+/api/files/${roomId}`
             );
 
             setFiles(res.data);
@@ -47,7 +48,7 @@ useEffect(() => {
 
         try {
             const res = await axios.post(
-                "http://localhost:5000/api/files/upload",
+                "https://collaboration-room.onrender.com/api/files/upload",
                 formData
             );
 
@@ -69,7 +70,8 @@ useEffect(() => {
     const deleteFile = async (id) => {
     try {
         await axios.delete(
-    `http://localhost:5000/api/files/${id}`
+    `https://collaboration-room.onrender.com
+/api/files/${id}`
 );
 
 socket.emit("file-deleted", roomId);
@@ -115,7 +117,8 @@ alert("File Deleted");
         }}
     >
         <a
-            href={`http://localhost:5000/uploads/${f.filePath}`}
+            href={`https://collaboration-room.onrender.com
+/uploads/${f.filePath}`}
             target="_blank"
             rel="noreferrer"
         >

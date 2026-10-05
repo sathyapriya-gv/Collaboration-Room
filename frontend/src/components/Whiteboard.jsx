@@ -45,7 +45,8 @@ function Whiteboard({ roomId }) {
         try {
           const res =
             await axios.get(
-              `http://localhost:5000/api/whiteboard/${roomId}`
+              `https://collaboration-room.onrender.com
+/api/whiteboard/${roomId}`
             );
 
           if (
