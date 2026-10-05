@@ -158,7 +158,7 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173` (default Vite port)
+The frontend will be available at ` https://collaboration-room-ten.vercel.app` (default Vite port)
 
 ### Build for Production
 ```bash

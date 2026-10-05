@@ -72,7 +72,7 @@ app.use("/peerjs", peerServer);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: " https://collaboration-room-ten.vercel.app",
     methods: ["GET", "POST"],
   },
 });
