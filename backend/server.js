@@ -265,6 +265,21 @@ socket.on(
     );
   });
 
+  socket.on("code-output", ({ roomId, output }) => {
+    if (
+      typeof roomId !== "string" ||
+      !socket.rooms.has(roomId) ||
+      typeof output !== "string"
+    ) {
+      return;
+    }
+
+    socket.to(roomId).emit("code-output", {
+      roomId,
+      output,
+    });
+  });
+
   socket.on("whiteboard-update", async (data) => {
     const { roomId, canvasData } = data;
 

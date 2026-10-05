@@ -390,11 +390,6 @@ const addText = () => {
 
       <div
         className="whiteboard-toolbar"
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "8px",
-        }}
       >
         <button
           onClick={

@@ -266,10 +266,12 @@
 
 .floating-reaction {
   position: fixed;
+  left: 50%;
   bottom: 50px;
   z-index: 99999;
   font-size: 52px;
   pointer-events: none;
+  transform: translateX(-50%);
   animation: floatUp 3s ease-out forwards;
 }
 
@@ -437,29 +439,28 @@
 
 @keyframes floatUp {
   0% {
-    transform: translateY(0);
+    transform: translate(-50%, 0);
     opacity: 1;
   }
+  100% {
+    transform: translate(-50%, -400px);
+    opacity: 0;
+  }
+}
 
-  @media (max-width: 420px) {
-    .room-action-bar {
-      left: 8px;
-      right: 8px;
-      transform: none;
-    }
-
-    .action-icon {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .action-icon small {
-      font-size: 8px;
-    }
+@media (max-width: 420px) {
+  .room-action-bar {
+    left: 8px;
+    right: 8px;
+    transform: none;
   }
 
-  100% {
-    transform: translateY(-400px);
-    opacity: 0;
+  .action-icon {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .action-icon small {
+    font-size: 8px;
   }
 }

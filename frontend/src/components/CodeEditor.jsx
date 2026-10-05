@@ -47,39 +47,60 @@ function CodeEditor({ roomId }) {
   };
 
   const runCode = () => {
+    const logs = [];
+    const originalLog = console.log;
+    let nextOutput;
+
     try {
-      const logs = [];
-
-      const originalLog = console.log;
-
       console.log = (...args) => {
-        logs.push(args.join(" "));
+        logs.push(
+          args
+            .map((value) => {
+              if (typeof value === "string") return value;
+              try {
+                return JSON.stringify(value) ?? String(value);
+              } catch {
+                return String(value);
+              }
+            })
+            .join(" ")
+        );
       };
 
       eval(code);
 
-      console.log = originalLog;
-
-      setOutput(
+      nextOutput =
         logs.length
           ? logs.join("\n")
-          : "Code executed successfully"
-      );
+          : "Code executed successfully";
     } catch (err) {
-      setOutput("Error: " + err.message);
+      nextOutput = "Error: " + err.message;
+    } finally {
+      console.log = originalLog;
     }
+
+    setOutput(nextOutput);
+    socket.emit("code-output", { roomId, output: nextOutput });
   };
 
   // REAL-TIME CODE SYNC
   useEffect(() => {
-    socket.on("code-update", (newCode) => {
+    const handleCodeUpdate = (newCode) => {
       setCode(newCode);
-    });
+    };
+    const handleCodeOutput = (data) => {
+      if (data.roomId !== roomId) return;
+      setOutput(data.output);
+    };
+
+    socket.on("code-update", handleCodeUpdate);
+    socket.on("code-output", handleCodeOutput);
 
     return () => {
-      socket.off("code-update");
+      socket.off("code-update", handleCodeUpdate);
+      socket.off("code-output", handleCodeOutput);
     };
-  }, []);
+  }, [roomId]);
 
   return (
     <div className="code-editor-container">
@@ -110,74 +131,41 @@ function CodeEditor({ roomId }) {
 </button>
       </div>
 
- <div className="code-editor-content">
-  {loading ? (
-    <div
-      style={{
-        padding: "20px",
-        textAlign: "center",
-      }}
-    >
-      Loading editor...
-    </div>
-  ) : (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-      }}
-    >
-      <Editor
-        height="100%"
-        language={language}
-        value={code}
-        onChange={handleChange}
-        theme="vs-light"
-        options={{
-          minimap: {
-            enabled: false,
-          },
-          wordWrap: "on",
-          fontSize: 14,
-        }}
-      />
+      <div className="code-editor-content">
+        {loading ? (
+          <div
+            style={{
+              flex: 1,
+              padding: "20px",
+              textAlign: "center",
+            }}
+          >
+            Loading editor...
+          </div>
+        ) : (
+          <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
+            <Editor
+              height="100%"
+              language={language}
+              value={code}
+              onChange={handleChange}
+              theme="vs-light"
+              options={{
+                minimap: {
+                  enabled: false,
+                },
+                wordWrap: "on",
+                fontSize: 14,
+              }}
+            />
+          </div>
+        )}
 
-      <div
-        style={{
-          background: "#111827",
-          color: "#f3f4f6",
-          padding: "12px",
-          height: "125px",
-          flex: "0 0 125px",
-          overflowY: "auto",
-          borderTop:
-            "3px solid #22c55e",
-        }}
-      >
-        <div
-          style={{
-            fontWeight: "bold",
-            marginBottom: "8px",
-          }}
-        >
-          Console Output
+        <div className="code-editor-output">
+          <div className="code-editor-output-title">Console Output</div>
+          <pre>{output || "Run your code to see output here."}</pre>
         </div>
-
-        <pre
-          style={{
-            margin: 0,
-            whiteSpace:
-              "pre-wrap",
-          }}
-        >
-          {output}
-        </pre>
       </div>
-    </div>
-  )}
-</div>
     </div>
   );
 }

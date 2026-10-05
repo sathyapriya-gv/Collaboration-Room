@@ -75,7 +75,6 @@ useEffect(() => {
         id,
         emoji: data.emoji,
         user: data.user,
-        left: 20 + Math.random() * 60,
       };
 
       setFloatingReactions(
@@ -394,9 +393,6 @@ useEffect(() => {
   <div
     key={reaction.id}
     className="floating-reaction"
-    style={{
-      left: `${reaction.left}%`,
-    }}
   >
     {reaction.emoji}
   </div>
