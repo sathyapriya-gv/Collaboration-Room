@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .code-editor-toolbar {
@@ -42,6 +43,7 @@
 
 .code-editor-content {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -247,4 +249,119 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Video call */
+
+.video-call {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  color: #f8fafc;
+}
+
+.video-call-notices {
+  display: grid;
+  gap: 6px;
+}
+
+.video-call-notices p,
+.video-call-status,
+.video-call-error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.video-call-notices p,
+.video-call-status {
+  background: #1d4ed8;
+}
+
+.video-call-error {
+  color: #7f1d1d;
+  background: #fee2e2;
+}
+
+.video-call-grid {
+  display: grid;
+  flex: 1;
+  min-height: 120px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  align-content: start;
+  gap: 10px;
+  overflow: auto;
+}
+
+.video-tile {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  background: #020617;
+}
+
+.video-feed {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-tile-label {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 5px 8px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(2, 6, 23, .85));
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-call-controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.video-control-button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  color: #f8fafc;
+  background: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.video-control-button:hover:not(:disabled) {
+  background: #475569;
+}
+
+.video-control-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.video-end-call {
+  border-color: #dc2626;
+  background: #ef4444;
+}
+
+.video-end-call:hover:not(:disabled) {
+  background: #dc2626;
 }

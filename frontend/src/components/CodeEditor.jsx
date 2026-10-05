@@ -70,18 +70,6 @@ function CodeEditor({ roomId }) {
     }
   };
 
-  const handleLanguageChange = (e) => {
-    const newLanguage = e.target.value;
-
-    setLanguage(newLanguage);
-
-    socket.emit("code-change", {
-      roomId,
-      code,
-      language: newLanguage,
-    });
-  };
-
   // REAL-TIME CODE SYNC
   useEffect(() => {
     socket.on("code-update", (newCode) => {
@@ -138,10 +126,11 @@ function CodeEditor({ roomId }) {
         display: "flex",
         flexDirection: "column",
         height: "100%",
+        minHeight: 0,
       }}
     >
       <Editor
-        height="350px"
+        height="100%"
         language={language}
         value={code}
         onChange={handleChange}
@@ -160,7 +149,8 @@ function CodeEditor({ roomId }) {
           background: "#111827",
           color: "#f3f4f6",
           padding: "12px",
-          height: "150px",
+          height: "125px",
+          flex: "0 0 125px",
           overflowY: "auto",
           borderTop:
             "3px solid #22c55e",

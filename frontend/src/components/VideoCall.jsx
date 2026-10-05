@@ -8,474 +8,372 @@ function VideoCall({ roomId }) {
   const peerRef = useRef(null);
   const callsRef = useRef([]);
   const peerUsersRef = useRef({});
+  const streamRef = useRef(null);
+  const screenStreamRef = useRef(null);
+  const callEndedRef = useRef(false);
   const [stream, setStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
-  const [sharingUser, setSharingUser] =
-  useState("");
-  const [canShare, setCanShare] =
-  useState(true);
-  const [screenSharing, setScreenSharing] =
-    useState(false);
-  const [raisedUser, setRaisedUser] =
-    useState("");
-
-   useEffect(() => {
-  socket.on(
-    "screen-share-user",
-    (message) => {
-      setSharingUser(message || "");
-    }
-  );
-
- 
-
-  return () => {
-    socket.off(
-      "screen-share-user"
-    );
-
-    
-  };
-}, []);
+  const [sharingUser, setSharingUser] = useState("");
+  const [canShare, setCanShare] = useState(true);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [raisedUser, setRaisedUser] = useState("");
+  const [callEnded, setCallEnded] = useState(false);
+  const [callError, setCallError] = useState("");
 
   useEffect(() => {
-    console.log("VideoCall mounted");
-    let peer;
+    let disposed = false;
+    callEndedRef.current = false;
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: true,
-        audio: true,
-      })
-      .then((currentStream) => {
-        setStream(currentStream);
+    const addCall = (call, user) => {
+      callsRef.current.push(call);
+      call.on("stream", (remoteStream) => {
+        setRemoteStreams((previous) => {
+          if (previous.some((item) => item.stream.id === remoteStream.id)) {
+            return previous;
+          }
 
-        if (myVideo.current) {
-          myVideo.current.srcObject = currentStream;
-        }
-
-        peer = new Peer(undefined, {
-          host: "localhost",
-          port: 5000,
-          path: "/peerjs",
+          return [...previous, { stream: remoteStream, user }];
         });
-
-        peerRef.current = peer;
-
-        peer.on("open", (id) => {
-          console.log("My Peer ID:", id);
-
-          socket.emit(
-            "peer-id",
-            {
-              roomId,
-              peerId: id,
-              user:
-                localStorage.getItem(
-                  "user"
-                ),
-            }
-          );
-        });
-
-        socket.on(
-  "peer-users-update",
-  (users) => {
-    peerUsersRef.current = users;
-  }
-);
-
-socket.on(
-  "hand-raised",
-  (user) => {
-    setRaisedUser(user);
-
-    // Remove notification after 3 seconds
-    setTimeout(() => {
-      setRaisedUser("");
-    }, 10000);
-  }
-);
-
-        // New user joins
-        socket.on(
-          "user-connected",
-          ({
-            peerId,
-            user,
-          }) => {
-            peerUsersRef.current[peerId] = user;
-            const call = peer.call(
-              peerId,
-              currentStream
-            );
-
-            callsRef.current.push(call);
-
-            call.on(
-              "stream",
-              (remoteStream) => {
-                setRemoteStreams((prev) => {
-                  const exists = prev.find(
-                    (s) =>
-                      s.stream.id === remoteStream.id
-                  );
-
-                  if (exists) return prev;
-
-                  return [
-                    ...prev,
-                    {
-                      stream: remoteStream,
-                      user,
-                    },
-                  ];
-                });
-              }
-            );
-          });
-
-        // Receive incoming call
-        peer.on("call", (call) => {
-          call.answer(currentStream);
-          callsRef.current.push(call);
-          call.on(
-            "stream",
-            (remoteStream) => {
-              setRemoteStreams((prev) => {
-                const exists = prev.find(
-                  (s) =>
-                    s.stream.id === remoteStream.id
-                );
-
-                if (exists) return prev;
-
-                return [
-  ...prev,
-  {
-    stream: remoteStream,
-    user:
-      peerUsersRef.current[
-        call.peer
-      ] || "Participant",
-  },
-];
-              });
-            }
-          );
-        });
-      })
-      .catch((err) => {
-        console.log(err);
       });
-
-    return () => {
-      socket.off("user-connected");
-      socket.off("peer-users-update");
-      socket.off("hand-raised");
-        callsRef.current = [];
-
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
-
-      setRemoteStreams([]);
     };
-  }, [roomId]);
 
-  const toggleCamera = () => {
-    if (!stream) return;
+    const handlePeerUsers = (users) => {
+      peerUsersRef.current = users;
+    };
 
-    const videoTrack =
-      stream.getVideoTracks()[0];
+    const handleUserConnected = ({ peerId, user }) => {
+      peerUsersRef.current[peerId] = user;
+      const peer = peerRef.current;
+      const localStream = streamRef.current;
 
-    videoTrack.enabled =
-      !videoTrack.enabled;
+      if (!peer || !localStream) return;
+      addCall(peer.call(peerId, localStream), user);
+    };
 
-    setCameraOn(videoTrack.enabled);
-  };
+    const handleRaisedHand = (user) => {
+      setRaisedUser(user);
+      setTimeout(() => setRaisedUser(""), 10000);
+    };
 
-  const toggleMic = () => {
-    if (!stream) return;
+    const handleScreenShareUser = (user) => {
+      setSharingUser(user || "");
+    };
 
-    const audioTrack =
-      stream.getAudioTracks()[0];
+    socket.on("peer-users-update", handlePeerUsers);
+    socket.on("user-connected", handleUserConnected);
+    socket.on("hand-raised", handleRaisedHand);
+    socket.on("screen-share-user", handleScreenShareUser);
 
-    audioTrack.enabled =
-      !audioTrack.enabled;
-
-    setMicOn(audioTrack.enabled);
-  };
-
-const startScreenShare = () => {
-
-  socket.emit(
-    "request-screen-share",
-    {
-      roomId,
-      user:
-        localStorage.getItem(
-          "user"
-        ),
-    },
-    async (response) => {
-
-      if (!response.allowed) {
-        alert(response.message);
-
-        return;
-      }
-
+    const startCall = async () => {
       try {
-        const screenStream =
-          await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-          });
-
-        const screenTrack =
-          screenStream.getVideoTracks()[0];
-
-        callsRef.current.forEach(
-          (call) => {
-
-            const sender =
-              call.peerConnection
-                ?.getSenders()
-                ?.find(
-                  (s) =>
-                    s.track &&
-                    s.track.kind ===
-                      "video"
-                );
-
-            if (sender) {
-              sender.replaceTrack(
-                screenTrack
-              );
-            }
-          }
-        );
-
-        myVideo.current.srcObject =
-          screenStream;
-
-        setScreenSharing(true);
-
-        setCanShare(false);
-
-        screenTrack.onended =
-          () => {
-            stopScreenShare();
-          };
-
-      } catch (err) {
-        console.log(err);
-
-        socket.emit(
-          "screen-share-stop",
-          {
-            roomId,
-            user:
-              localStorage.getItem(
-                "user"
-              ),
-          }
-        );
-      }
-    }
-  );
-};
-  const stopScreenShare =
-  async () => {
-    try {
-      const cameraStream =
-        await navigator.mediaDevices.getUserMedia({
+        const localStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
 
-      const cameraTrack =
-        cameraStream.getVideoTracks()[0];
-
-      callsRef.current.forEach(
-        (call) => {
-          const sender =
-            call.peerConnection
-              ?.getSenders()
-              ?.find(
-                (s) =>
-                  s.track &&
-                  s.track.kind ===
-                    "video"
-              );
-
-          if (sender) {
-            sender.replaceTrack(
-              cameraTrack
-            );
-          }
+        if (disposed || callEndedRef.current) {
+          localStream.getTracks().forEach((track) => track.stop());
+          return;
         }
-      );
 
-      myVideo.current.srcObject =
-        cameraStream;
+        streamRef.current = localStream;
+        setStream(localStream);
 
-      setStream(cameraStream);
+        if (myVideo.current) {
+          myVideo.current.srcObject = localStream;
+        }
 
-      setScreenSharing(false);
-      setCanShare(true);
-      socket.emit(
-  "screen-share-stop",
-  {
-    roomId,
-    user:
-      localStorage.getItem(
-        "user"
-      ),
-  }
-);
-    } catch (err) {
-      console.log(err);
+        const peer = new Peer(undefined, {
+          host: "localhost",
+          port: 5000,
+          path: "/peerjs",
+        });
+        peerRef.current = peer;
+
+        peer.on("open", (peerId) => {
+          socket.emit("peer-id", {
+            roomId,
+            peerId,
+            user: localStorage.getItem("user"),
+          });
+        });
+
+        peer.on("call", (call) => {
+          call.answer(localStream);
+          addCall(
+            call,
+            peerUsersRef.current[call.peer] || "Participant",
+          );
+        });
+      } catch (error) {
+        if (!disposed) {
+          setCallError(
+            error instanceof Error
+              ? error.message
+              : "Unable to start the video call.",
+          );
+        }
+      }
+    };
+
+    startCall();
+
+    return () => {
+      disposed = true;
+      callEndedRef.current = true;
+      socket.off("peer-users-update", handlePeerUsers);
+      socket.off("user-connected", handleUserConnected);
+      socket.off("hand-raised", handleRaisedHand);
+      socket.off("screen-share-user", handleScreenShareUser);
+      callsRef.current.forEach((call) => call.close());
+      callsRef.current = [];
+      peerRef.current?.destroy();
+      peerRef.current = null;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      screenStreamRef.current?.getTracks().forEach((track) => {
+        track.onended = null;
+        track.stop();
+      });
+      screenStreamRef.current = null;
+    };
+  }, [roomId]);
+
+  const toggleCamera = () => {
+    const videoTrack = streamRef.current?.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    videoTrack.enabled = !videoTrack.enabled;
+    setCameraOn(videoTrack.enabled);
+  };
+
+  const toggleMic = () => {
+    const audioTrack = streamRef.current?.getAudioTracks()[0];
+    if (!audioTrack) return;
+
+    audioTrack.enabled = !audioTrack.enabled;
+    setMicOn(audioTrack.enabled);
+  };
+
+  const stopScreenShare = () => {
+    const cameraTrack = streamRef.current?.getVideoTracks()[0];
+    const screenStream = screenStreamRef.current;
+
+    if (cameraTrack) {
+      callsRef.current.forEach((call) => {
+        const sender = call.peerConnection
+          ?.getSenders()
+          .find((item) => item.track?.kind === "video");
+        sender?.replaceTrack(cameraTrack);
+      });
     }
+
+    if (myVideo.current && streamRef.current) {
+      myVideo.current.srcObject = streamRef.current;
+    }
+
+    if (screenStream) {
+      screenStream.getTracks().forEach((track) => {
+        track.onended = null;
+        track.stop();
+      });
+      screenStreamRef.current = null;
+    }
+
+    setScreenSharing(false);
+    setCanShare(true);
+    socket.emit("screen-share-stop", {
+      roomId,
+      user: localStorage.getItem("user"),
+    });
+  };
+
+  const startScreenShare = () => {
+    socket.emit(
+      "request-screen-share",
+      {
+        roomId,
+        user: localStorage.getItem("user"),
+      },
+      async (response) => {
+        if (callEndedRef.current) {
+          socket.emit("screen-share-stop", {
+            roomId,
+            user: localStorage.getItem("user"),
+          });
+          return;
+        }
+
+        if (!response?.allowed) {
+          setCallError(response?.message || "Screen sharing is unavailable.");
+          return;
+        }
+
+        try {
+          const screenStream =
+            await navigator.mediaDevices.getDisplayMedia({ video: true });
+          if (callEndedRef.current) {
+            screenStream.getTracks().forEach((track) => track.stop());
+            socket.emit("screen-share-stop", {
+              roomId,
+              user: localStorage.getItem("user"),
+            });
+            return;
+          }
+
+          const screenTrack = screenStream.getVideoTracks()[0];
+          screenStreamRef.current = screenStream;
+
+          callsRef.current.forEach((call) => {
+            const sender = call.peerConnection
+              ?.getSenders()
+              .find((item) => item.track?.kind === "video");
+            sender?.replaceTrack(screenTrack);
+          });
+
+          if (myVideo.current) {
+            myVideo.current.srcObject = screenStream;
+          }
+
+          setCallError("");
+          setScreenSharing(true);
+          setCanShare(false);
+          screenTrack.onended = stopScreenShare;
+        } catch (error) {
+          if (callEndedRef.current) return;
+          setCallError(
+            error instanceof Error
+              ? error.message
+              : "Unable to share your screen.",
+          );
+          socket.emit("screen-share-stop", {
+            roomId,
+            user: localStorage.getItem("user"),
+          });
+        }
+      },
+    );
+  };
+
+  const endCall = () => {
+    callEndedRef.current = true;
+    if (screenSharing) {
+      socket.emit("screen-share-stop", {
+        roomId,
+        user: localStorage.getItem("user"),
+      });
+    }
+
+    callsRef.current.forEach((call) => call.close());
+    callsRef.current = [];
+    peerRef.current?.destroy();
+    peerRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    screenStreamRef.current?.getTracks().forEach((track) => {
+      track.onended = null;
+      track.stop();
+    });
+    screenStreamRef.current = null;
+    if (myVideo.current) {
+      myVideo.current.srcObject = null;
+    }
+    setStream(null);
+    setRemoteStreams([]);
+    setCameraOn(false);
+    setMicOn(false);
+    setScreenSharing(false);
+    setCanShare(true);
+    setCallEnded(true);
   };
 
   return (
-    <div>
-      <h3>Video Call</h3>
+    <section className="video-call">
+      {(sharingUser || raisedUser) && (
+        <div className="video-call-notices">
+          {sharingUser && <p>🖥 {sharingUser} is sharing a screen</p>}
+          {raisedUser && <p>✋ {raisedUser} raised their hand</p>}
+        </div>
+      )}
 
-      {/* My Video */}
-      {sharingUser && (
-  <div
-    style={{
-      background: "#2563eb",
-      color: "white",
-      padding: "10px",
-      borderRadius: "8px",
-      marginBottom: "10px",
-      textAlign: "center",
-      fontWeight: "bold",
-    }}
-  >
-    🖥 {sharingUser}
-  </div>
-)}
+      {callError && <p className="video-call-error" role="status">{callError}</p>}
+      {callEnded && (
+        <p className="video-call-status" role="status">
+          Call ended. Close and reopen Video to start another call.
+        </p>
+      )}
 
-{raisedUser && (
-  <div
-    style={{
-      background: "#f59e0b",
-      color: "white",
-      padding: "10px",
-      borderRadius: "8px",
-      marginBottom: "10px",
-      textAlign: "center",
-      fontWeight: "bold",
-    }}
-  >
-    ✋ {raisedUser} raised their hand
-  </div>
-)}
+      <div className="video-call-grid">
+        <div className="video-tile">
+          <video
+            ref={myVideo}
+            autoPlay
+            muted
+            playsInline
+            className="video-feed"
+          />
+          <span className="video-tile-label">You</span>
+        </div>
 
-
-      {/* Remote Videos */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
-          justifyContent: "center",
-          marginTop: "10px",
-        }}
-      >
-        <video
-          ref={myVideo}
-          autoPlay
-          muted
-          playsInline
-          width="250"
-          style={{
-            border: "2px solid black",
-            borderRadius: "10px",
-          }}
-        />
-
-        {remoteStreams.map(
-          (item, index) => (
-            <RemoteVideo
-              key={index}
-              stream={item.stream}
-              user={item.user}
-            />
-          )
-        )}
+        {remoteStreams.map((item) => (
+          <RemoteVideo
+            key={item.stream.id}
+            stream={item.stream}
+            user={item.user}
+          />
+        ))}
       </div>
 
-      <br />
-      <br />
-
-      <button onClick={toggleCamera}>
-        {cameraOn
-          ? "Turn Camera Off"
-          : "Turn Camera On"}
-      </button>
-
-      <button
-        onClick={toggleMic}
-        style={{
-          marginLeft: "10px",
-        }}
-      >
-        {micOn
-          ? "Mute Mic"
-          : "Unmute Mic"}
-      </button>
-
-      <button
-  onClick={
-    screenSharing
-      ? stopScreenShare
-      : startScreenShare
-  }
-  disabled={!canShare && !screenSharing}
-  style={{
-    marginLeft: "10px",
-    opacity:
-      !canShare && !screenSharing
-        ? 0.5
-        : 1,
-    cursor:
-      !canShare && !screenSharing
-        ? "not-allowed"
-        : "pointer",
-  }}
->
-  {screenSharing
-    ? "Stop Share"
-    : "Share Screen"}
-</button>
-
-<button
-  onClick={() =>
-    socket.emit(
-      "raise-hand",
-      {
-        roomId,
-        user:
-          localStorage.getItem(
-            "user"
-          ),
-      }
-    )
-  }
-  style={{
-    marginLeft: "10px",
-  }}
->
-  ✋ Raise Hand
-</button>
-    </div>
+      <div className="video-call-controls">
+        <button
+          type="button"
+          className="video-control-button"
+          onClick={toggleCamera}
+          disabled={callEnded || !stream}
+        >
+          {cameraOn ? "Turn camera off" : "Turn camera on"}
+        </button>
+        <button
+          type="button"
+          className="video-control-button"
+          onClick={toggleMic}
+          disabled={callEnded || !stream}
+        >
+          {micOn ? "Mute mic" : "Unmute mic"}
+        </button>
+        <button
+          type="button"
+          className="video-control-button"
+          onClick={screenSharing ? stopScreenShare : startScreenShare}
+          disabled={callEnded || (!canShare && !screenSharing)}
+        >
+          {screenSharing ? "Stop sharing" : "Share screen"}
+        </button>
+        <button
+          type="button"
+          className="video-control-button"
+          onClick={() =>
+            socket.emit("raise-hand", {
+              roomId,
+              user: localStorage.getItem("user"),
+            })
+          }
+          disabled={callEnded}
+        >
+          Raise hand
+        </button>
+        <button
+          type="button"
+          className="video-control-button video-end-call"
+          onClick={endCall}
+          disabled={callEnded}
+        >
+          End call
+        </button>
+      </div>
+    </section>
   );
 }
 

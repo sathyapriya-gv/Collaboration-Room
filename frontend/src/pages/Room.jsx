@@ -21,6 +21,8 @@ function Room() {
 
 const [floatingReactions, setFloatingReactions] =
   useState([]);
+  const reactionIdRef = useRef(0);
+  const reactionTimeoutsRef = useRef(new Set());
 
 const [notifications, setNotifications] = useState([]);
 
@@ -32,17 +34,7 @@ const formattedTime =
     .toISOString()
     .substring(11, 19);
 
-  useEffect(() => {
-  console.log(
-    "Floating reactions:",
-    floatingReactions
-  );
-}, [floatingReactions]);
-
-  const [position, setPosition] = useState({
-    x: 200,
-    y: 100,
-  });
+  const [position, setPosition] = useState(null);
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -51,7 +43,23 @@ const formattedTime =
     navigate("/");
   };
 
+  const showNotification = (text) => {
+    const id = Date.now();
+
+    setNotifications((prev) => [
+      ...prev,
+      { id, text },
+    ]);
+
+    setTimeout(() => {
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== id)
+      );
+    }, 3000);
+  };
+
 useEffect(() => {
+  const reactionTimeouts = reactionTimeoutsRef.current;
   const user = localStorage.getItem("user");
 
   socket.emit("join-room", {
@@ -62,16 +70,12 @@ useEffect(() => {
   socket.on(
     "show-reaction",
     (data) => {
-
-      console.log(
-      "Reaction received:",
-      data
-    );
-
+      const id = ++reactionIdRef.current;
       const reaction = {
-        id: Date.now(),
+        id,
         emoji: data.emoji,
         user: data.user,
+        left: 20 + Math.random() * 60,
       };
 
       setFloatingReactions(
@@ -81,15 +85,17 @@ useEffect(() => {
         ]
       );
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setFloatingReactions(
           (prev) =>
             prev.filter(
               (r) =>
-                r.id !== reaction.id
+                r.id !== id
             )
         );
+        reactionTimeoutsRef.current.delete(timeoutId);
       }, 3000);
+      reactionTimeoutsRef.current.add(timeoutId);
     }
   );
 
@@ -108,6 +114,8 @@ socket.on("receive-message", (data) => {
 
 
   return () => {
+    reactionTimeouts.forEach(clearTimeout);
+    reactionTimeouts.clear();
     socket.off("users-update");
     socket.off("show-reaction");
      socket.off("room-notification");
@@ -124,21 +132,6 @@ useEffect(() => {
   return () => clearInterval(timer);
 }, []);
 
-
-const showNotification = (text) => {
-  const id = Date.now();
-
-  setNotifications((prev) => [
-    ...prev,
-    { id, text },
-  ]);
-
-  setTimeout(() => {
-    setNotifications((prev) =>
-      prev.filter((n) => n.id !== id)
-    );
-  }, 3000);
-};
 
   const copyRoomId = () => {
     navigator.clipboard.writeText(roomId);
@@ -187,8 +180,10 @@ const showNotification = (text) => {
   const startDrag = (e) => {
     e.preventDefault();
 
-    const startX = e.clientX - position.x;
-    const startY = e.clientY - position.y;
+    const bounds =
+      e.currentTarget.parentElement.getBoundingClientRect();
+    const startX = e.clientX - bounds.left;
+    const startY = e.clientY - bounds.top;
 
     const move = (event) => {
       setPosition({
@@ -307,6 +302,8 @@ const showNotification = (text) => {
           <button
   type="button"
   className="action-icon"
+  aria-expanded={showReactionPicker}
+  aria-label="Choose a reaction"
   onClick={() =>
     setShowReactionPicker(
       !showReactionPicker
@@ -327,32 +324,14 @@ const showNotification = (text) => {
 </button>
 
 {showReactionPicker && (
-  <div
-    style={{
-      position: "absolute",
-      right: "80px",
-      bottom: "20px",
-      background: "white",
-      padding: "10px",
-      borderRadius: "12px",
-      boxShadow:
-        "0 4px 10px rgba(0,0,0,0.2)",
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      zIndex: 9999,
-    }}
-  >
+  <div className="reaction-picker" role="group" aria-label="Reactions">
     {["👍", "❤️", "😂", "👏", "🎉"].map(
       (emoji) => (
         <button
           key={emoji}
-          style={{
-            fontSize: "24px",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-          }}
+          type="button"
+          className="reaction-option"
+          aria-label={`Send ${emoji} reaction`}
           onClick={() => {
             socket.emit(
               "reaction",
@@ -386,11 +365,11 @@ const showNotification = (text) => {
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              position: "absolute",
+            style={position ? {
               left: `${position.x}px`,
               top: `${position.y}px`,
-            }}
+              right: "auto",
+            } : undefined}
           >
             <div
               className="room-modal-header"
@@ -414,14 +393,9 @@ const showNotification = (text) => {
       {floatingReactions.map((reaction) => (
   <div
     key={reaction.id}
+    className="floating-reaction"
     style={{
-      position: "fixed",
-      left: `${20 + Math.random() * 60}%`,
-      bottom: "50px",
-      fontSize: "60px",
-      zIndex: 99999,
-      animation: "floatUp 3s ease-out forwards",
-      pointerEvents: "none",
+      left: `${reaction.left}%`,
     }}
   >
     {reaction.emoji}

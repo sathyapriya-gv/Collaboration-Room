@@ -10,30 +10,14 @@ function RemoteVideo({ stream, user }) {
   }, [stream]);
 
   return (
-    <div
-      style={{
-        textAlign: "center",
-      }}
-    >
+    <div className="video-tile">
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        width="250"
-        style={{
-          border: "2px solid black",
-          borderRadius: "10px",
-        }}
+        className="video-feed"
       />
-
-      <p
-        style={{
-          marginTop: "5px",
-          fontWeight: "bold",
-        }}
-      >
-        {user}
-      </p>
+      <span className="video-tile-label">{user}</span>
     </div>
   );
 }
